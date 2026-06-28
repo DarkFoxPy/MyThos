@@ -6,12 +6,9 @@ Responde preguntas usando EXCLUSIVAMENTE los documentos indexados de la empresa.
 No inventa. No generaliza. Si la respuesta no está, lo dice explícitamente.
 Resuelve las Fallas 1, 2, 4, 5 y 10 del Entregable 1.
 """
-import google.generativeai as genai
-from config import GEMINI_API_KEY, GEMINI_MODEL, RAG_THRESHOLD, RAG_TOP_K
+from config import RAG_THRESHOLD, RAG_TOP_K
 from utils.processor import embed_query
 from utils.i18n import t_lang, lang_name
-
-genai.configure(api_key=GEMINI_API_KEY)
 
 ATLAS_SYSTEM_PROMPT = """Sos Atlas, el asistente de conocimiento corporativo del sistema Mythos.
 Tu función es responder preguntas de empleados nuevos usando ÚNICAMENTE la información
@@ -170,6 +167,87 @@ def count_questions(employee_id: str, module_id: str, db) -> int:
     return result.count or 0
 
 
+def retrieve_for_module(title: str, topic: str, company_id: str, db, k: int = 12) -> list[dict]:
+    """
+    Recupera los fragmentos más relevantes a un módulo concreto usando su
+    título + tema como consulta semántica. A diferencia de tomar los primeros
+    chunks de la empresa, esto asegura que las preguntas y la calificación de
+    Artemis se basen en el material que realmente corresponde al módulo.
+    Umbral 0.0 + top_k para traer siempre los más cercanos aunque la similitud
+    no sea alta.
+    """
+    query = f"{title}. {topic}".strip(". ").strip()
+    if not query:
+        return []
+    try:
+        emb = embed_query(query)
+        result = db.rpc("match_documents", {
+            "query_embedding":  emb,
+            "match_company_id": company_id,
+            "match_threshold":  0.0,
+            "match_count":      k,
+        }).execute()
+        return result.data or []
+    except Exception:
+        return []
+
+
+def get_company_documents(company_id: str, db) -> list[dict]:
+    """Lista los documentos oficiales ya procesados de la empresa."""
+    return (
+        db.table("documents")
+        .select("id, filename, processed, created_at")
+        .eq("company_id", company_id)
+        .eq("processed", True)
+        .order("created_at")
+        .execute()
+        .data
+        or []
+    )
+
+
+def get_document_text(document_id: str, db) -> str:
+    """
+    Reconstruye el texto oficial de un documento a partir de sus chunks,
+    eliminando el solapamiento (CHUNK_OVERLAP) entre fragmentos consecutivos.
+    Permite que el empleado y el supervisor lean la fuente real subida por
+    el administrador sin necesidad de almacenar el archivo original.
+    """
+    from config import CHUNK_OVERLAP
+
+    rows = (
+        db.table("document_chunks")
+        .select("content, chunk_index")
+        .eq("document_id", document_id)
+        .order("chunk_index")
+        .execute()
+        .data
+        or []
+    )
+    if not rows:
+        return ""
+
+    parts = []
+    for i, r in enumerate(rows):
+        words = (r.get("content") or "").split()
+        if i > 0 and CHUNK_OVERLAP > 0:
+            words = words[CHUNK_OVERLAP:]
+        if words:
+            parts.append(" ".join(words))
+    return " ".join(parts).strip()
+
+
+def find_documents_by_names(company_id: str, names: list[str], db) -> list[dict]:
+    """Devuelve los documentos cuyos filenames coincidan (best-effort) con la
+    lista de fuentes declaradas por un módulo (modules.source_documents)."""
+    docs = get_company_documents(company_id, db)
+    if not names:
+        return docs
+    wanted = {n.strip().lower() for n in names if n}
+    matched = [d for d in docs if d["filename"].strip().lower() in wanted]
+    return matched or docs
+
+
 def generate_module_route(company_id: str, db, lang: str = "es") -> list[dict]:
     """
     Analiza los documentos de la empresa y propone una ruta de módulos estructurada.
@@ -177,7 +255,7 @@ def generate_module_route(company_id: str, db, lang: str = "es") -> list[dict]:
     """
     import json
 
-    chunks_result = db.table("document_chunks").select("content, document_id").eq("company_id", company_id).limit(80).execute()
+    chunks_result = db.table("document_chunks").select("content, document_id").eq("company_id", company_id).limit(120).execute()
     if not chunks_result.data:
         raise ValueError("No hay documentos procesados. Subí documentos primero.")
 
@@ -191,34 +269,42 @@ def generate_module_route(company_id: str, db, lang: str = "es") -> list[dict]:
     sections = []
     for doc_id, chunks in by_doc.items():
         fname = doc_names.get(doc_id, doc_id)
-        sections.append(f"=== {fname} ===\n" + "\n".join(chunks[:8]))
+        sections.append(f"=== {fname} ===\n" + "\n".join(chunks[:14]))
 
-    content = "\n\n".join(sections)[:14000]
+    content = "\n\n".join(sections)[:22000]
 
-    prompt = f"""Analizá los siguientes documentos corporativos y generá una ruta de onboarding
-estructurada para empleados nuevos durante su período de prueba laboral (60 días).
+    prompt = f"""Sos Atlas, el agente de conocimiento del sistema Mythos. Analizá los siguientes
+documentos corporativos reales y diseñá una ruta de onboarding ESPECÍFICA para empleados
+nuevos durante su período de prueba laboral (60 días).
 
 DOCUMENTOS:
 {content}
 
-INSTRUCCIONES:
-- Identificá los temas principales que efectivamente aparecen en los documentos
-- NO inventes módulos sobre temas que no estén respaldados por contenido real
-- Si los documentos hablan de cultura o valores, ese módulo va primero
-- Si los documentos son solo técnicos/operativos, empezá por lo más general
-- Ordená los módulos de lo más general a lo más específico dentro de lo que hay
-- Máximo 6 módulos para el MVP
-- Cada módulo debe completarse en 15-30 minutos de lectura
-- IMPORTANTE — Los títulos y temas de los módulos deben estar redactados en {lang_name(lang)}.
+INSTRUCCIONES (seguilas con rigor):
+- Basate ÚNICAMENTE en lo que dicen los documentos. NO inventes temas que no aparezcan.
+- PROHIBIDO usar títulos genéricos o de relleno como "Nuestros valores", "Introducción",
+  "Generalidades", "Bienvenida" o "Cultura organizacional" a secas. Cada título debe nombrar
+  el CONTENIDO CONCRETO que el empleado va a aprender (procedimientos, políticas, herramientas,
+  reglas puntuales que figuran en los documentos).
+- Cada módulo debe representar una unidad de conocimiento ACCIONABLE: al terminarlo, el empleado
+  debe poder HACER o APLICAR algo concreto del puesto, no solo "conocer" un tema.
+- En "tema_principal" describí los puntos específicos y aplicables que cubre el módulo
+  (ej: "Cómo cargar un ticket, niveles de prioridad y tiempos de respuesta del área de soporte"),
+  citando los conceptos reales que aparecen en los documentos. Evitá descripciones vagas.
+- En "documentos_fuente" listá los nombres EXACTOS de los archivos (=== entre signos ===) de los
+  que sale el módulo.
+- Ordená de lo más general/transversal a lo más específico/operativo según lo que realmente haya.
+- Entre 4 y 6 módulos. Cada uno completable en 15-30 minutos de lectura.
+- IMPORTANTE — Los títulos y temas deben estar redactados en {lang_name(lang)}.
 
 Respondé ÚNICAMENTE con este JSON (sin texto adicional):
 {{
   "modulos": [
     {{
       "orden": 1,
-      "titulo": "Título claro y motivador del módulo",
-      "tema_principal": "Descripción breve del tema central",
-      "documentos_fuente": ["nombre del archivo fuente"],
+      "titulo": "Título específico que nombra el contenido concreto del módulo",
+      "tema_principal": "Puntos concretos y aplicables que cubre, citando conceptos reales de los documentos",
+      "documentos_fuente": ["nombre_exacto_del_archivo"],
       "duracion_estimada_minutos": 20
     }}
   ]

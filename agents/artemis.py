@@ -8,15 +8,11 @@ tiempo + historial de chat + resultado del quiz.
 Resuelve las Fallas 2, 3 y 8 del Entregable 1.
 """
 import json
-import google.generativeai as genai
 from config import (
-    GEMINI_API_KEY, GEMINI_MODEL,
     MIN_MODULE_TIME_RATIO, BREACH_SCORE_THRESHOLD, VERIFIED_SCORE_THRESHOLD,
 )
 from agents.atlas import count_questions
 from utils.i18n import lang_name
-
-genai.configure(api_key=GEMINI_API_KEY)
 
 # ── Función A: Generación de preguntas aplicadas ──────────────────────────────
 
@@ -127,9 +123,19 @@ Criterios para los indicadores:
 
 
 def _get_module_content(module_id: str, company_id: str, db) -> str:
+    from agents import atlas
+
     mod = db.table("modules").select("title, topic").eq("id", module_id).single().execute().data
-    chunks = db.table("document_chunks").select("content").eq("company_id", company_id).limit(15).execute().data or []
-    header = f"Módulo: {mod['title']}\nTema: {mod.get('topic','')}\n\n" if mod else ""
+    title = mod["title"] if mod else ""
+    topic = mod.get("topic", "") if mod else ""
+
+    # Material específico del módulo (recuperación semántica por título + tema).
+    chunks = atlas.retrieve_for_module(title, topic, company_id, db)
+    if not chunks:
+        # Fallback seguro: primeros fragmentos de la empresa (comportamiento previo)
+        chunks = db.table("document_chunks").select("content").eq("company_id", company_id).limit(15).execute().data or []
+
+    header = f"Módulo: {title}\nTema: {topic}\n\n" if mod else ""
     return header + "\n\n".join(c["content"] for c in chunks)
 
 

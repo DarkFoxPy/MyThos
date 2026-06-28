@@ -5,10 +5,14 @@ Extrae texto de PDF/DOCX, divide en chunks y genera embeddings con Gemini.
 import io
 import time
 import math
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from config import GEMINI_API_KEY, EMBEDDING_MODEL, EMBEDDING_DIM, CHUNK_SIZE, CHUNK_OVERLAP
 
-genai.configure(api_key=GEMINI_API_KEY)
+_client = genai.Client(api_key=GEMINI_API_KEY)
+
+# El SDK nuevo espera el nombre sin el prefijo "models/"
+_EMB_MODEL = EMBEDDING_MODEL.replace("models/", "")
 
 
 def _embed(text: str, task_type: str) -> list[float]:
@@ -17,20 +21,22 @@ def _embed(text: str, task_type: str) -> list[float]:
     default; pedimos 768 explícitamente, y si la SDK no soporta el parámetro,
     truncamos + renormalizamos."""
     try:
-        result = genai.embed_content(
-            model=EMBEDDING_MODEL,
-            content=text,
-            task_type=task_type,
-            output_dimensionality=EMBEDDING_DIM,
+        result = _client.models.embed_content(
+            model=_EMB_MODEL,
+            contents=text,
+            config=types.EmbedContentConfig(
+                task_type=task_type,
+                output_dimensionality=EMBEDDING_DIM,
+            ),
         )
     except TypeError:
-        result = genai.embed_content(
-            model=EMBEDDING_MODEL,
-            content=text,
-            task_type=task_type,
+        result = _client.models.embed_content(
+            model=_EMB_MODEL,
+            contents=text,
+            config=types.EmbedContentConfig(task_type=task_type),
         )
 
-    emb = result["embedding"]
+    emb = list(result.embeddings[0].values)
     if len(emb) > EMBEDDING_DIM:
         emb = emb[:EMBEDDING_DIM]
     elif len(emb) < EMBEDDING_DIM:

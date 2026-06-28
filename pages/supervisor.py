@@ -1,3 +1,4 @@
+import html
 import json
 import streamlit as st
 import plotly.graph_objects as go
@@ -42,10 +43,11 @@ def _plotly_layout(fig, height=300, title=None):
 def show(profile: dict, company_id: str):
     page_header(t("sup.title"), t("sup.subtitle"))
 
-    tab_alerts, tab_overview, tab_detail = st.tabs([
+    tab_alerts, tab_overview, tab_detail, tab_docs = st.tabs([
         t("sup.tab.alerts"),
         t("sup.tab.overview"),
         t("sup.tab.detail"),
+        t("sup.tab.docs"),
     ])
 
     with tab_alerts:
@@ -54,6 +56,33 @@ def show(profile: dict, company_id: str):
         _overview(company_id)
     with tab_detail:
         _detail(company_id)
+    with tab_docs:
+        _docs(company_id)
+
+
+def _docs(company_id: str):
+    """Documentación oficial cargada por el administrador (lectura para el supervisor)."""
+    st.markdown(f"### {t('sup.docs.title')}")
+    st.markdown(f"<p style='font-size:0.78rem; color:#666;'>{t('sup.docs.desc')}</p>", unsafe_allow_html=True)
+
+    db = get_client(st.session_state.get("access_token"))
+    docs = atlas.get_company_documents(company_id, db)
+    if not docs:
+        st.info(t("sup.docs.empty"))
+        return
+
+    for d in docs:
+        with st.expander(f"📄  {d['filename']}"):
+            text = atlas.get_document_text(d["id"], db)
+            if text:
+                st.markdown(
+                    f"<div style='font-size:0.85rem; color:#CCC; line-height:1.6; "
+                    f"max-height:480px; overflow-y:auto; white-space:pre-wrap; "
+                    f"padding:0.5rem 0.25rem;'>{text}</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.caption("—")
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -591,7 +620,7 @@ def _detail(company_id: str):
     for mod in modules:
         prog     = db.table("employee_progress").select("*").eq("employee_id", emp_id).eq("module_id", mod["id"]).execute().data
         breach   = db.table("breach_analyses").select("*").eq("employee_id", emp_id).eq("module_id", mod["id"]).execute().data
-        qresults = db.table("quiz_results").select("score, justification, created_at").eq("employee_id", emp_id).eq("module_id", mod["id"]).execute().data or []
+        qresults = db.table("quiz_results").select("score, answer, justification, question_id, created_at").eq("employee_id", emp_id).eq("module_id", mod["id"]).execute().data or []
 
         # Determinar color y label del módulo en el expander
         if breach:
@@ -618,12 +647,22 @@ def _detail(company_id: str):
 
                 if qresults:
                     st.markdown(f"""<div style="font-size:0.72rem; color:#666; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.5rem; margin-top:0.75rem;">{t('sup.detail.quiz_detail')}</div>""", unsafe_allow_html=True)
+                    # Texto de las preguntas para mostrar contexto junto a cada respuesta
+                    qrows = db.table("quiz_questions").select("id, question").eq("module_id", mod["id"]).execute().data or []
+                    q_text = {q["id"]: q["question"] for q in qrows}
                     score_dots = {"correct": "dot-green", "partial": "dot-yellow", "incorrect": "dot-red"}
                     for i, r in enumerate(qresults):
                         dc = score_dots.get(r["score"], "dot-gray")
+                        question = html.escape(q_text.get(r.get("question_id"), ""))
+                        answer = html.escape((r.get("answer") or "").strip()) or "—"
                         st.markdown(f"""
-<div style="padding:0.5rem 0.75rem; background:#0F0F0F; border:1px solid #1E1E1E; border-radius:2px; margin-bottom:4px; font-size:0.8rem; color:#CCCCCC;">
-  <span class="dot {dc}"></span>Q{i+1}: {r['justification']}
+<div style="padding:0.6rem 0.75rem; background:#0F0F0F; border:1px solid #1E1E1E; border-radius:2px; margin-bottom:6px; font-size:0.8rem; color:#CCCCCC;">
+  <div style="font-weight:600; color:#FFF; margin-bottom:0.35rem;"><span class="dot {dc}"></span>Q{i+1}{(': ' + question) if question else ''}</div>
+  <div style="margin:0.15rem 0 0.4rem; padding:0.45rem 0.6rem; background:#0A0A0A; border-left:3px solid #0088FF; border-radius:2px;">
+    <span style="font-size:0.68rem; color:#88BBFF; letter-spacing:0.08em; text-transform:uppercase;">{t('sup.detail.answer')}</span><br>
+    <span style="color:#E5E5E5; white-space:pre-wrap;">{answer}</span>
+  </div>
+  <div style="font-size:0.78rem; color:#999;">{html.escape(r.get('justification') or '')}</div>
 </div>
 """, unsafe_allow_html=True)
 

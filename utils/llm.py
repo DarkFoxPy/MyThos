@@ -4,12 +4,16 @@ Wrapper LLM con fallback automático entre modelos.
 Si el modelo principal falla por cuota (429), retry, o respuesta vacía,
 intenta automáticamente con modelos alternativos en orden de preferencia.
 Esto evita que la demo se rompa si un modelo agotó su cuota diaria.
+
+SDK: google-genai (cliente nuevo). Reemplaza al deprecado google-generativeai.
 """
 import time
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from config import GEMINI_API_KEY, GEMINI_MODEL
 
-genai.configure(api_key=GEMINI_API_KEY)
+# Cliente único reutilizado por todas las llamadas
+_client = genai.Client(api_key=GEMINI_API_KEY)
 
 
 # Cadena de modelos a probar en orden si el primario falla por cuota
@@ -25,7 +29,7 @@ FALLBACK_CHAIN = [
 def _is_quota_error(exc: Exception) -> bool:
     """Detecta si la excepción es por cuota agotada (429)."""
     msg = str(exc).lower()
-    return any(k in msg for k in ("429", "quota", "exhausted", "rate", "exceeded"))
+    return any(k in msg for k in ("429", "quota", "exhausted", "rate", "exceeded", "resource_exhausted"))
 
 
 def _extract_text(response) -> str:
@@ -40,7 +44,7 @@ def _extract_text(response) -> str:
     try:
         cand = response.candidates[0] if response.candidates else None
         if cand and cand.content and cand.content.parts:
-            return "".join(p.text for p in cand.content.parts if hasattr(p, "text"))
+            return "".join(p.text for p in cand.content.parts if getattr(p, "text", None))
     except Exception:
         pass
     return ""
@@ -61,15 +65,18 @@ def generate(prompt: str, json_mode: bool = False, max_retries: int = 1) -> str:
     Raises:
         RuntimeError con un mensaje amigable si TODOS los modelos fallaron.
     """
-    config = {"response_mime_type": "application/json"} if json_mode else {}
+    config = types.GenerateContentConfig(response_mime_type="application/json") if json_mode else None
     last_err = None
     tried = []
 
     for model_name in FALLBACK_CHAIN:
         for attempt in range(max_retries + 1):
             try:
-                gm = genai.GenerativeModel(model_name, generation_config=config)
-                response = gm.generate_content(prompt)
+                response = _client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=config,
+                )
                 text = _extract_text(response)
                 if text.strip():
                     return text

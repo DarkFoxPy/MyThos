@@ -13,12 +13,39 @@ def show(profile: dict, company_id: str):
 
     page_header(f"{t('emp.welcome')}, {profile['full_name']}", t("emp.subtitle"))
 
-    tab_route, tab_chat = st.tabs([t("emp.tab.route"), t("emp.tab.assistant")])
+    tab_route, tab_docs, tab_chat = st.tabs([t("emp.tab.route"), t("emp.tab.docs"), t("emp.tab.assistant")])
 
     with tab_route:
         _route_tab(employee_id, company_id, db)
+    with tab_docs:
+        _docs_tab(company_id, db)
     with tab_chat:
         _chat_tab(employee_id, company_id, db)
+
+
+def _docs_tab(company_id: str, db):
+    """Documentación oficial: el empleado lee la fuente real que cargó el
+    administrador, reconstruida desde los chunks indexados."""
+    st.markdown(f"### {t('emp.docs.title')}")
+    st.markdown(f"<p style='font-size:0.82rem; color:#888;'>{t('emp.docs.desc')}</p>", unsafe_allow_html=True)
+
+    docs = atlas.get_company_documents(company_id, db)
+    if not docs:
+        st.info(t("emp.docs.empty"))
+        return
+
+    for d in docs:
+        with st.expander(f"📄  {d['filename']}"):
+            text = atlas.get_document_text(d["id"], db)
+            if text:
+                st.markdown(
+                    f"<div style='font-size:0.85rem; color:#CCC; line-height:1.6; "
+                    f"max-height:480px; overflow-y:auto; white-space:pre-wrap; "
+                    f"padding:0.5rem 0.25rem;'>{text}</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.caption("—")
 
 
 def _route_tab(employee_id: str, company_id: str, db):
@@ -45,18 +72,35 @@ def _route_tab(employee_id: str, company_id: str, db):
 
     st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
 
-    for mod in modules:
+    for idx, mod in enumerate(modules):
         prog   = prog_map.get(mod["id"], {})
         status = prog.get("status", "not_started")
         time_s = prog.get("time_spent_minutes", 0)
 
+        # Candado secuencial: un módulo se desbloquea solo si el anterior
+        # (por orden de la ruta) está completado. El primero siempre está abierto.
+        if idx == 0:
+            locked = False
+        else:
+            prev_id = modules[idx - 1]["id"]
+            prev_status = prog_map.get(prev_id, {}).get("status", "not_started")
+            locked = (prev_status != "completed")
+
         status_dots = {"not_started": "dot-gray", "in_progress": "dot-yellow", "completed": "dot-green"}
         status_lbls = {"not_started": t("status.not_started"), "in_progress": t("status.in_progress"), "completed": t("status.completed")}
 
+        lock_prefix = "🔒  " if locked else ""
         with st.expander(
-            f"{t('emp.module')} {mod['order_index']}  ·  {mod['title']}",
-            expanded=(status == "in_progress")
+            f"{lock_prefix}{t('emp.module')} {mod['order_index']}  ·  {mod['title']}",
+            expanded=(status == "in_progress" and not locked)
         ):
+            if locked:
+                st.markdown(
+                    f"<div style='font-size:0.85rem; color:#888; padding:0.5rem 0;'>"
+                    f"🔒 {t('emp.module.locked')}</div>",
+                    unsafe_allow_html=True,
+                )
+                continue
             col_info, col_status = st.columns([3, 1])
             with col_info:
                 st.markdown(f"<span style='font-size:0.78rem; color:#888;'>{t('emp.topic')}:</span> <span style='font-size:0.82rem; color:#CCC;'>{mod.get('topic','')}</span>", unsafe_allow_html=True)
@@ -78,6 +122,21 @@ def _route_tab(employee_id: str, company_id: str, db):
                     bdot = {"verified": "dot-green", "not_verified": "dot-yellow", "breach_detected": "dot-red"}.get(bstatus, "dot-gray")
                     blbl = {"verified": t("status.verified"), "not_verified": t("status.not_verified"), "breach_detected": t("status.breach")}.get(bstatus, bstatus)
                     st.markdown(f"""<div style="margin-top:0.5rem; font-size:0.72rem; color:#888;">Artemis &nbsp; <span class="dot {bdot}"></span>{blbl}</div>""", unsafe_allow_html=True)
+
+            # ── Material oficial del módulo ──────────────────────────────────
+            source_docs = atlas.find_documents_by_names(company_id, mod.get("source_documents") or [], db)
+            if source_docs:
+                with st.expander(f"📄 {t('emp.docs.source')}"):
+                    for d in source_docs:
+                        st.markdown(f"<div style='font-size:0.8rem; color:#FF8000; font-weight:600; margin-bottom:0.25rem;'>{d['filename']}</div>", unsafe_allow_html=True)
+                        text = atlas.get_document_text(d["id"], db)
+                        if text:
+                            st.markdown(
+                                f"<div style='font-size:0.83rem; color:#CCC; line-height:1.6; "
+                                f"max-height:360px; overflow-y:auto; white-space:pre-wrap; "
+                                f"padding:0.25rem 0 0.75rem;'>{text}</div>",
+                                unsafe_allow_html=True,
+                            )
 
             st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
 

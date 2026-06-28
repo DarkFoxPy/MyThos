@@ -1,6 +1,5 @@
 import requests
 import streamlit as st
-import streamlit.components.v1 as components
 from config import SUPABASE_URL, SUPABASE_KEY
 from utils.theme import logo_html
 from utils.i18n import t
@@ -8,13 +7,15 @@ from utils.i18n import t
 
 def _autocomplete_fix():
     """Marca los inputs con autocomplete correcto para evitar que el navegador
-    proponga generar contraseñas o trate el login como un signup."""
-    components.html("""
+    proponga generar contraseñas o trate el login como un signup.
+    Se ejecuta inline en el documento principal vía st.html, por eso usa
+    `document` directamente (no window.parent)."""
+    st.html("""
 <script>
 (function() {
   function fix() {
     try {
-      var doc = window.parent.document;
+      var doc = document;
       doc.querySelectorAll('input[type="password"]').forEach(function(i) {
         i.setAttribute('autocomplete', 'current-password');
         i.setAttribute('data-lpignore', 'false');
@@ -37,7 +38,7 @@ def _autocomplete_fix():
   setTimeout(fix, 1200);
 })();
 </script>
-""", height=0)
+""", unsafe_allow_javascript=True)
 
 
 def show():
