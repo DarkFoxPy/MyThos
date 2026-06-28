@@ -122,7 +122,7 @@ def process_document(file_bytes: bytes, filename: str, document_id: str, company
 def index_text(text: str, document_id: str, company_id: str, db) -> int:
     """
     Indexa texto plano ya existente (sin archivo de origen) en pgvector.
-    Lo usa Chiron para incorporar el conocimiento capturado al supervisor
+    Lo usa Quirón para incorporar el conocimiento capturado al supervisor
     como un documento más del RAG. Misma lógica que process_document pero
     partiendo de texto en vez de bytes.
     """

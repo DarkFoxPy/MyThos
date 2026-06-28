@@ -52,7 +52,7 @@ def _sidebar():
 <div class="agent-badge"><span class="dot dot-green"></span>Atlas &mdash; RAG</div>
 <div class="agent-badge"><span class="dot dot-green"></span>Apollo &mdash; NLP</div>
 <div class="agent-badge"><span class="dot dot-green"></span>Artemis &mdash; Evaluation</div>
-<div class="agent-badge"><span class="dot dot-green"></span>Chiron &mdash; Capture</div>
+<div class="agent-badge"><span class="dot dot-green"></span>Quirón &mdash; Capture</div>
 """, unsafe_allow_html=True)
 
             st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
