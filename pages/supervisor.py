@@ -4,7 +4,7 @@ import streamlit as st
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from database.client import get_client
-from agents import artemis, atlas, athena
+from agents import artemis, atlas, athena, mnemosyne
 from agents.artemis import parse_breach_detail
 from utils.theme import page_header
 from utils.i18n import t, get_lang
@@ -43,11 +43,12 @@ def _plotly_layout(fig, height=300, title=None):
 def show(profile: dict, company_id: str):
     page_header(t("sup.title"), t("sup.subtitle"))
 
-    tab_alerts, tab_overview, tab_detail, tab_docs = st.tabs([
+    tab_alerts, tab_overview, tab_detail, tab_docs, tab_capture = st.tabs([
         t("sup.tab.alerts"),
         t("sup.tab.overview"),
         t("sup.tab.detail"),
         t("sup.tab.docs"),
+        t("sup.tab.capture"),
     ])
 
     with tab_alerts:
@@ -58,6 +59,80 @@ def show(profile: dict, company_id: str):
         _detail(company_id)
     with tab_docs:
         _docs(company_id)
+    with tab_capture:
+        _capture(company_id)
+
+
+def _capture(company_id: str):
+    """Mnemosyne — el supervisor le enseña a Mythos su conocimiento del puesto
+    mediante una entrevista guiada que se documenta e indexa en el RAG."""
+    st.markdown(f"### {t('sup.capture.title')}")
+    st.markdown(f"<p style='font-size:0.82rem; color:#888; line-height:1.6;'>{t('sup.capture.intro')}</p>", unsafe_allow_html=True)
+
+    db = get_client(st.session_state.get("access_token"))
+
+    # ── Resultado de una captura recién guardada ─────────────────────────────
+    result = st.session_state.get("capture_result")
+    if result:
+        st.markdown(f"""
+<div style="display:flex; align-items:center; gap:0.75rem; padding:1rem; background:#0A1A0A; border:1px solid #1E3E1E; border-radius:4px; margin-bottom:1rem;">
+  <span class="dot dot-green"></span>
+  <span style="font-size:0.9rem; color:#00CC44;"><strong>{t('sup.capture.saved')} {result['filename']}</strong> — {result['chunks']} {t('sup.capture.fragments')}</span>
+</div>
+""", unsafe_allow_html=True)
+        with st.expander(t("sup.capture.preview")):
+            st.markdown(result.get("document_text", ""))
+        if st.button(t("sup.capture.new"), type="primary"):
+            for k in ("capture_result", "capture_questions", "capture_topic"):
+                st.session_state.pop(k, None)
+            st.rerun()
+        return
+
+    # ── Paso 1: tema + generar preguntas ─────────────────────────────────────
+    topic = st.text_input(
+        t("sup.capture.topic_label"),
+        value=st.session_state.get("capture_topic", ""),
+        placeholder=t("sup.capture.topic_ph"),
+    )
+
+    if st.button(t("sup.capture.generate"), type="primary"):
+        if not topic.strip():
+            st.warning(t("sup.capture.need_topic"))
+        else:
+            with st.spinner(t("sup.capture.generating")):
+                try:
+                    qs = mnemosyne.generate_questions(topic.strip(), lang=get_lang())
+                    st.session_state.capture_questions = qs
+                    st.session_state.capture_topic = topic.strip()
+                    st.rerun()
+                except Exception as e:
+                    err = str(e).lower()
+                    st.warning(t("sup.capture.quota") if any(k in err for k in ("429", "quota", "cuota", "rate")) else t("sup.capture.error"))
+
+    # ── Paso 2: responder preguntas + enseñar ────────────────────────────────
+    questions = st.session_state.get("capture_questions")
+    if questions:
+        st.markdown("<hr style='border-color:#1E1E1E; margin:1rem 0;'>", unsafe_allow_html=True)
+        st.markdown(f"<p style='font-size:0.78rem; color:#666;'>{t('sup.capture.answers_hint')}</p>", unsafe_allow_html=True)
+
+        answers = []
+        for i, q in enumerate(questions):
+            st.markdown(f"<p style='font-size:0.88rem; font-weight:600; color:#FFF; margin-bottom:0.3rem;'>{i+1}. {q}</p>", unsafe_allow_html=True)
+            a = st.text_area(t("sup.capture.answer_label"), key=f"cap_ans_{i}", height=90, label_visibility="collapsed")
+            answers.append({"pregunta": q, "respuesta": a})
+
+        if st.button(t("sup.capture.save"), type="primary", use_container_width=True):
+            if not any((a["respuesta"] or "").strip() for a in answers):
+                st.warning(t("sup.capture.empty"))
+            else:
+                with st.spinner(t("sup.capture.saving")):
+                    try:
+                        res = mnemosyne.capture(st.session_state.capture_topic, answers, company_id, db, lang=get_lang())
+                        st.session_state.capture_result = res
+                        st.rerun()
+                    except Exception as e:
+                        err = str(e).lower()
+                        st.warning(t("sup.capture.quota") if any(k in err for k in ("429", "quota", "cuota", "rate")) else t("sup.capture.error"))
 
 
 def _docs(company_id: str):

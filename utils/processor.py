@@ -117,3 +117,29 @@ def process_document(file_bytes: bytes, filename: str, document_id: str, company
 
     db.table("documents").update({"processed": True}).eq("id", document_id).execute()
     return len(chunks)
+
+
+def index_text(text: str, document_id: str, company_id: str, db) -> int:
+    """
+    Indexa texto plano ya existente (sin archivo de origen) en pgvector.
+    Lo usa Mnemosyne para incorporar el conocimiento capturado al supervisor
+    como un documento más del RAG. Misma lógica que process_document pero
+    partiendo de texto en vez de bytes.
+    """
+    if not text.strip():
+        raise ValueError("El texto a indexar está vacío.")
+
+    chunks = split_into_chunks(text)
+    for i, chunk in enumerate(chunks):
+        embedding = embed_document(chunk)
+        db.table("document_chunks").insert({
+            "document_id": document_id,
+            "company_id":  company_id,
+            "content":     chunk,
+            "embedding":   embedding,
+            "chunk_index": i,
+        }).execute()
+        time.sleep(0.08)
+
+    db.table("documents").update({"processed": True}).eq("id", document_id).execute()
+    return len(chunks)
