@@ -198,9 +198,8 @@ def _alerts(company_id: str):
 
     # ── Alertas de estancamiento ─────────────────────────────────────────────
     for a in stalled:
-        with st.container(border=True):
-            st.markdown(f"""
-<div style="background:#1A1100; border-left:4px solid {COLOR_WARN}; padding:1rem 1.2rem; border-radius:4px;">
+        st.markdown(f"""
+<div style="background:#1A1100; border:1px solid {COLOR_WARN}44; border-left:4px solid {COLOR_WARN}; padding:1rem 1.2rem; border-radius:4px; margin-bottom:0.75rem;">
   <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
     <span class="dot dot-yellow"></span>
     <span style="font-size:0.95rem; font-weight:600; color:#FFFFFF;">{a['employee_name']}</span>
@@ -233,75 +232,47 @@ def _alert_card(breach_row: dict, employee_name: str, module_title: str):
     metricas = detail.get("metricas", {})
     indicadores = detail.get("indicadores", {})
 
-    with st.container(border=True):
-        # ── Header ───────────────────────────────────────────────────────────
-        st.markdown(f"""
-<div style="background:{bg}; border-left:4px solid {accent}; padding:1rem 1.2rem 0.5rem; border-radius:4px 4px 0 0;">
-  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+    # ── Header ───────────────────────────────────────────────────────────────
+    brechas_html = ""
+    if brechas:
+        items = "".join(f'<div style="display:flex;gap:0.5rem;padding:0.2rem 0;font-size:0.83rem;color:#E0CCCC;"><span style="color:{COLOR_BAD};font-weight:700;">×</span><span>{br}</span></div>' for br in brechas)
+        brechas_html = f'<div style="margin-top:0.8rem;padding:0.7rem 0.9rem;background:#1A0A0A;border:1px solid #3D1010;border-radius:4px;"><div style="font-size:0.7rem;color:{COLOR_BAD};letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:0.4rem;">⨯ Conceptos NO comprendidos</div>{items}</div>'
+
+    fortalezas_html = ""
+    if fortalezas:
+        items = "".join(f'<div style="display:flex;gap:0.5rem;padding:0.2rem 0;font-size:0.83rem;color:#CCE0CC;"><span style="color:{COLOR_OK};font-weight:700;">✓</span><span>{fo}</span></div>' for fo in fortalezas)
+        fortalezas_html = f'<div style="margin-top:0.5rem;padding:0.7rem 0.9rem;background:#0A1A0A;border:1px solid #1E3E1E;border-radius:4px;"><div style="font-size:0.7rem;color:{COLOR_OK};letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:0.4rem;">✓ Conceptos sí comprendidos</div>{items}</div>'
+
+    accion_html = ""
+    if accion:
+        accion_html = f'<div style="margin-top:0.5rem;padding:0.7rem 0.9rem;background:#0A0F1A;border-left:3px solid {COLOR_NEU};border-radius:4px;"><div style="font-size:0.7rem;color:#88BBFF;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:0.25rem;">→ Acción sugerida al supervisor</div><div style="font-size:0.85rem;color:#DCE6F2;">{accion}</div></div>'
+
+    st.markdown(f"""
+<div style="background:{bg}; border:1px solid {accent}44; border-left:4px solid {accent}; padding:1rem 1.2rem; border-radius:4px; margin-bottom:0.25rem;">
+  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
     <span class="dot {dot}"></span>
     <span style="font-size:0.95rem; font-weight:600; color:#FFFFFF;">{employee_name}</span>
     <span style="font-size:0.78rem; color:#888;">  ·  {module_title}</span>
     <span style="margin-left:auto; font-size:0.7rem; color:{accent}; letter-spacing:0.1em; text-transform:uppercase; font-weight:700;">{label}</span>
   </div>
   <div style="font-size:0.85rem; color:#CCC; margin-bottom:0.3rem; line-height:1.5;">{razon}</div>
+  {brechas_html}
+  {fortalezas_html}
+  {accion_html}
 </div>
 """, unsafe_allow_html=True)
 
-        # ── Métricas con gráficos pequeños ───────────────────────────────────
-        if metricas:
-            alert_key = f"alert_{breach_row.get('id', '')}_{breach_row.get('module_id', '')}"
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                _metric_time(metricas, key=alert_key)
-            with c2:
-                _metric_quiz(metricas, key=alert_key)
-            with c3:
-                _metric_consultas(metricas, key=alert_key)
-
-        # ── Brechas específicas (qué no aprendió) ────────────────────────────
-        if brechas:
-            st.markdown(f"""
-<div style="margin-top:1rem; padding:0.8rem 1rem; background:#1A0A0A; border:1px solid #3D1010; border-radius:4px;">
-  <div style="font-size:0.72rem; color:{COLOR_BAD}; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; margin-bottom:0.5rem;">
-    ⨯ Conceptos NO comprendidos
-  </div>
-""", unsafe_allow_html=True)
-            for br in brechas:
-                st.markdown(f"""
-<div style="display:flex; gap:0.5rem; padding:0.3rem 0; font-size:0.83rem; color:#E0CCCC;">
-  <span style="color:{COLOR_BAD}; font-weight:700;">×</span>
-  <span>{br}</span>
-</div>
-""", unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        # ── Fortalezas ───────────────────────────────────────────────────────
-        if fortalezas:
-            st.markdown(f"""
-<div style="margin-top:0.5rem; padding:0.8rem 1rem; background:#0A1A0A; border:1px solid #1E3E1E; border-radius:4px;">
-  <div style="font-size:0.72rem; color:{COLOR_OK}; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; margin-bottom:0.5rem;">
-    ✓ Conceptos sí comprendidos
-  </div>
-""", unsafe_allow_html=True)
-            for fo in fortalezas:
-                st.markdown(f"""
-<div style="display:flex; gap:0.5rem; padding:0.3rem 0; font-size:0.83rem; color:#CCE0CC;">
-  <span style="color:{COLOR_OK}; font-weight:700;">✓</span>
-  <span>{fo}</span>
-</div>
-""", unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        # ── Acción sugerida ──────────────────────────────────────────────────
-        if accion:
-            st.markdown(f"""
-<div style="margin-top:0.6rem; padding:0.8rem 1rem; background:#0A0F1A; border-left:3px solid {COLOR_NEU}; border-radius:4px;">
-  <div style="font-size:0.72rem; color:#88BBFF; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; margin-bottom:0.3rem;">
-    → Acción sugerida al supervisor
-  </div>
-  <div style="font-size:0.85rem; color:#DCE6F2;">{accion}</div>
-</div>
-""", unsafe_allow_html=True)
+    # ── Métricas con gráficos pequeños ──────────────────────────────────────
+    if metricas:
+        alert_key = f"alert_{breach_row.get('id', '')}_{breach_row.get('module_id', '')}"
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            _metric_time(metricas, key=alert_key)
+        with c2:
+            _metric_quiz(metricas, key=alert_key)
+        with c3:
+            _metric_consultas(metricas, key=alert_key)
+    st.markdown("<div style='margin-bottom:1rem;'></div>", unsafe_allow_html=True)
 
 
 def _metric_time(m: dict, key: str = ""):
