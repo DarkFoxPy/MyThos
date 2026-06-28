@@ -47,13 +47,16 @@ def _sidebar():
             st.markdown(f"""
 <div style="font-size:0.68rem; color:#666; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem;">{t('sidebar.active_agents')}</div>
 """, unsafe_allow_html=True)
-            st.markdown("""
+            from utils import flags
+            badges = """
 <div class="agent-badge"><span class="dot dot-green"></span>Athena &mdash; Orchestrator</div>
 <div class="agent-badge"><span class="dot dot-green"></span>Atlas &mdash; RAG</div>
 <div class="agent-badge"><span class="dot dot-green"></span>Apollo &mdash; NLP</div>
 <div class="agent-badge"><span class="dot dot-green"></span>Artemis &mdash; Evaluation</div>
-<div class="agent-badge"><span class="dot dot-green"></span>Quirón &mdash; Capture</div>
-""", unsafe_allow_html=True)
+"""
+            if flags.is_post_mvp():
+                badges += '<div class="agent-badge"><span class="dot dot-green"></span>Quirón &mdash; Capture</div>\n'
+            st.markdown(badges, unsafe_allow_html=True)
 
             st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
             if st.button(t("sidebar.signout"), use_container_width=True):

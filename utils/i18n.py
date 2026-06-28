@@ -364,19 +364,28 @@ def lang_name(lang: str) -> str:
 
 
 def selector():
-    """Dropdown de idioma arriba a la derecha."""
+    """Dropdown de idioma arriba a la derecha.
+    Escribir el código secreto (utils.flags.SECRET_CODE) en el buscador alterna
+    el modo post-MVP, sin un widget con `key` para que la selección vuelva al
+    idioma actual tras el toggle."""
+    from utils import flags
+
     init_lang()
     cur = get_lang()
+    options = list(LANGS) + [flags.SECRET_CODE]
+
     cols = st.columns([10, 1.6])
     with cols[1]:
         choice = st.selectbox(
             "lang",
-            LANGS,
-            index=LANGS.index(cur),
-            format_func=lambda c: f"  {c.upper()}   {LANG_LABELS[c]}",
+            options,
+            index=options.index(cur) if cur in options else 0,
+            format_func=lambda c: (f"  {c.upper()}   {LANG_LABELS[c]}" if c in LANG_LABELS else c),
             label_visibility="collapsed",
-            key="lang_selector_box",
         )
-        if choice != cur:
+        if choice == flags.SECRET_CODE:
+            flags.toggle_post_mvp()
+            st.rerun()
+        elif choice != cur:
             set_lang(choice)
             st.rerun()

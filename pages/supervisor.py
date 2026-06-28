@@ -44,24 +44,31 @@ def _plotly_layout(fig, height=300, title=None):
 def show(profile: dict, company_id: str):
     page_header(t("sup.title"), t("sup.subtitle"))
 
-    tab_alerts, tab_overview, tab_detail, tab_docs, tab_capture = st.tabs([
+    from utils import flags
+
+    labels = [
         t("sup.tab.alerts"),
         t("sup.tab.overview"),
         t("sup.tab.detail"),
         t("sup.tab.docs"),
-        t("sup.tab.capture"),
-    ])
+    ]
+    show_capture = flags.is_post_mvp()
+    if show_capture:
+        labels.append(t("sup.tab.capture"))
 
-    with tab_alerts:
+    tabs = st.tabs(labels)
+
+    with tabs[0]:
         _alerts(company_id)
-    with tab_overview:
+    with tabs[1]:
         _overview(company_id)
-    with tab_detail:
+    with tabs[2]:
         _detail(company_id)
-    with tab_docs:
+    with tabs[3]:
         _docs(company_id)
-    with tab_capture:
-        _capture(company_id)
+    if show_capture:
+        with tabs[4]:
+            _capture(company_id)
 
 
 def _capture(company_id: str):
