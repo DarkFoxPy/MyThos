@@ -3,6 +3,7 @@ from database.client import get_client
 from agents import atlas, artemis, athena
 from utils.theme import page_header
 from utils.i18n import t, get_lang
+from utils import export
 
 
 def show(profile: dict, company_id: str):
@@ -38,6 +39,13 @@ def _docs_tab(company_id: str, db):
         with st.expander(f"📄  {d['filename']}"):
             text = atlas.get_document_text(d["id"], db)
             if text:
+                st.download_button(
+                    t("doc.download"),
+                    data=export.text_to_docx_bytes(d["filename"], text),
+                    file_name=export.docx_filename(d["filename"]),
+                    mime=export.DOCX_MIME,
+                    key=f"dl_emp_{d['id']}",
+                )
                 st.markdown(
                     f"<div style='font-size:0.85rem; color:#CCC; line-height:1.6; "
                     f"max-height:480px; overflow-y:auto; white-space:pre-wrap; "
@@ -131,6 +139,13 @@ def _route_tab(employee_id: str, company_id: str, db):
                         st.markdown(f"<div style='font-size:0.8rem; color:#FF8000; font-weight:600; margin-bottom:0.25rem;'>{d['filename']}</div>", unsafe_allow_html=True)
                         text = atlas.get_document_text(d["id"], db)
                         if text:
+                            st.download_button(
+                                t("doc.download"),
+                                data=export.text_to_docx_bytes(d["filename"], text),
+                                file_name=export.docx_filename(d["filename"]),
+                                mime=export.DOCX_MIME,
+                                key=f"dl_mod_{mod['id']}_{d['id']}",
+                            )
                             st.markdown(
                                 f"<div style='font-size:0.83rem; color:#CCC; line-height:1.6; "
                                 f"max-height:360px; overflow-y:auto; white-space:pre-wrap; "

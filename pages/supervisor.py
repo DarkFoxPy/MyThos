@@ -8,6 +8,7 @@ from agents import artemis, atlas, athena, quiron
 from agents.artemis import parse_breach_detail
 from utils.theme import page_header
 from utils.i18n import t, get_lang
+from utils import export
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -150,6 +151,13 @@ def _docs(company_id: str):
         with st.expander(f"📄  {d['filename']}"):
             text = atlas.get_document_text(d["id"], db)
             if text:
+                st.download_button(
+                    t("doc.download"),
+                    data=export.text_to_docx_bytes(d["filename"], text),
+                    file_name=export.docx_filename(d["filename"]),
+                    mime=export.DOCX_MIME,
+                    key=f"dl_sup_{d['id']}",
+                )
                 st.markdown(
                     f"<div style='font-size:0.85rem; color:#CCC; line-height:1.6; "
                     f"max-height:480px; overflow-y:auto; white-space:pre-wrap; "
@@ -510,7 +518,7 @@ def _overview(company_id: str):
             fig = make_subplots(
                 rows=1, cols=2,
                 subplot_titles=("Tiempo dedicado (min)", "Puntaje del cuestionario (%)"),
-                horizontal_spacing=0.15,
+                horizontal_spacing=0.28,
             )
             fig.add_trace(go.Bar(
                 x=time_data, y=labels, orientation='h',
@@ -524,11 +532,14 @@ def _overview(company_id: str):
             ), row=1, col=2)
 
             fig.update_xaxes(gridcolor=COLOR_LINE, color=COLOR_MUTED, row=1, col=1)
-            fig.update_xaxes(gridcolor=COLOR_LINE, color=COLOR_MUTED, range=[0, 100], row=1, col=2)
-            fig.update_yaxes(color=COLOR_MUTED, automargin=True)
+            fig.update_xaxes(gridcolor=COLOR_LINE, color=COLOR_MUTED, range=[0, 105], row=1, col=2)
+            # Etiquetas de módulo solo en el gráfico izquierdo; en el derecho se ocultan
+            # para que no se pisen con las barras (son los mismos módulos).
+            fig.update_yaxes(color=COLOR_MUTED, automargin=True, row=1, col=1)
+            fig.update_yaxes(showticklabels=False, row=1, col=2)
             fig.update_annotations(font_size=11, font_color=COLOR_MUTED)
             fig.update_layout(
-                height=max(180, 50 * len(mods) + 80),
+                height=max(180, 52 * len(mods) + 90),
                 margin=dict(l=10, r=10, t=40, b=10),
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",

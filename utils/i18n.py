@@ -230,6 +230,9 @@ T = {
                              "en": "I had a problem generating the response. Try rephrasing your question.",
                              "pt": "Tive um problema gerando a resposta. Tente reformular a pergunta."},
 
+    # ── Documentos (descarga) ──
+    "doc.download":            {"es": "Descargar .docx",        "en": "Download .docx",        "pt": "Baixar .docx"},
+
     # ── Status / Common ──
     "status.completed":        {"es": "Completado",             "en": "Completed",             "pt": "Concluído"},
     "status.in_progress":      {"es": "En progreso",            "en": "In progress",           "pt": "Em andamento"},
