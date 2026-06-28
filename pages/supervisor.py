@@ -50,7 +50,6 @@ def show(profile: dict, company_id: str):
         t("sup.tab.alerts"),
         t("sup.tab.overview"),
         t("sup.tab.detail"),
-        t("sup.tab.docs"),
     ]
     show_capture = flags.is_post_mvp()
     if show_capture:
@@ -64,10 +63,8 @@ def show(profile: dict, company_id: str):
         _overview(company_id)
     with tabs[2]:
         _detail(company_id)
-    with tabs[3]:
-        _docs(company_id)
     if show_capture:
-        with tabs[4]:
+        with tabs[3]:
             _capture(company_id)
 
 
@@ -141,38 +138,6 @@ def _capture(company_id: str):
                     except Exception as e:
                         err = str(e).lower()
                         st.warning(t("sup.capture.quota") if any(k in err for k in ("429", "quota", "cuota", "rate")) else t("sup.capture.error"))
-
-
-def _docs(company_id: str):
-    """Documentación oficial cargada por el administrador (lectura para el supervisor)."""
-    st.markdown(f"### {t('sup.docs.title')}")
-    st.markdown(f"<p style='font-size:0.78rem; color:#666;'>{t('sup.docs.desc')}</p>", unsafe_allow_html=True)
-
-    db = get_client(st.session_state.get("access_token"))
-    docs = atlas.get_company_documents(company_id, db)
-    if not docs:
-        st.info(t("sup.docs.empty"))
-        return
-
-    for d in docs:
-        with st.expander(f"📄  {d['filename']}"):
-            text = atlas.get_document_text(d["id"], db)
-            if text:
-                st.download_button(
-                    t("doc.download"),
-                    data=export.text_to_docx_bytes(d["filename"], text),
-                    file_name=export.docx_filename(d["filename"]),
-                    mime=export.DOCX_MIME,
-                    key=f"dl_sup_{d['id']}",
-                )
-                st.markdown(
-                    f"<div style='font-size:0.85rem; color:#CCC; line-height:1.6; "
-                    f"max-height:480px; overflow-y:auto; white-space:pre-wrap; "
-                    f"padding:0.5rem 0.25rem;'>{text}</div>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.caption("—")
 
 
 # ════════════════════════════════════════════════════════════════════════════

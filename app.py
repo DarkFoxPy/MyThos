@@ -68,6 +68,12 @@ def _sidebar():
 
 
 def main():
+    # Atajo de desarrollo invisible: ?modopostMVP=1 en la URL activa el modo
+    # post-MVP (muestra Quirón). No aparece en ningún control del front.
+    from utils import flags
+    if flags.SECRET_CODE in st.query_params:
+        flags.set_post_mvp(True)
+
     _init()
     _sidebar()
 

@@ -14,46 +14,12 @@ def show(profile: dict, company_id: str):
 
     page_header(f"{t('emp.welcome')}, {profile['full_name']}", t("emp.subtitle"))
 
-    tab_route, tab_docs, tab_chat = st.tabs([t("emp.tab.route"), t("emp.tab.docs"), t("emp.tab.assistant")])
+    tab_route, tab_chat = st.tabs([t("emp.tab.route"), t("emp.tab.assistant")])
 
     with tab_route:
         _route_tab(employee_id, company_id, db)
-    with tab_docs:
-        _docs_tab(company_id, db)
     with tab_chat:
         _chat_tab(employee_id, company_id, db)
-
-
-def _docs_tab(company_id: str, db):
-    """Documentación oficial: el empleado lee la fuente real que cargó el
-    administrador, reconstruida desde los chunks indexados."""
-    st.markdown(f"### {t('emp.docs.title')}")
-    st.markdown(f"<p style='font-size:0.82rem; color:#888;'>{t('emp.docs.desc')}</p>", unsafe_allow_html=True)
-
-    docs = atlas.get_company_documents(company_id, db)
-    if not docs:
-        st.info(t("emp.docs.empty"))
-        return
-
-    for d in docs:
-        with st.expander(f"📄  {d['filename']}"):
-            text = atlas.get_document_text(d["id"], db)
-            if text:
-                st.download_button(
-                    t("doc.download"),
-                    data=export.text_to_docx_bytes(d["filename"], text),
-                    file_name=export.docx_filename(d["filename"]),
-                    mime=export.DOCX_MIME,
-                    key=f"dl_emp_{d['id']}",
-                )
-                st.markdown(
-                    f"<div style='font-size:0.85rem; color:#CCC; line-height:1.6; "
-                    f"max-height:480px; overflow-y:auto; white-space:pre-wrap; "
-                    f"padding:0.5rem 0.25rem;'>{text}</div>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.caption("—")
 
 
 def _route_tab(employee_id: str, company_id: str, db):

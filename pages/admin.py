@@ -5,7 +5,6 @@ from agents import atlas
 from utils.processor import process_document
 from utils.theme import page_header
 from utils.i18n import t, get_lang
-from utils import export
 
 
 def show(profile: dict, company_id: str):
@@ -52,32 +51,18 @@ def _documents(company_id: str):
     st.markdown(f"""<div style="font-size:0.72rem; color:#666; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.75rem;">{t('admin.docs.indexed')}</div>""", unsafe_allow_html=True)
 
     db = get_client(st.session_state.get("access_token"))
-    docs = db.table("documents").select("id, filename, processed, created_at").eq("company_id", company_id).order("created_at", desc=True).execute().data or []
+    docs = db.table("documents").select("filename, processed, created_at").eq("company_id", company_id).order("created_at", desc=True).execute().data or []
     if docs:
         for d in docs:
-            dot = "🟢" if d["processed"] else "🟡"
+            dot = "dot-green" if d["processed"] else "dot-yellow"
             label = t("admin.docs.processed") if d["processed"] else t("admin.docs.pending")
-            with st.expander(f"{dot}  {d['filename']}  ·  {label}"):
-                if d["processed"]:
-                    text = atlas.get_document_text(d["id"], db)
-                    if text:
-                        st.download_button(
-                            t("doc.download"),
-                            data=export.text_to_docx_bytes(d["filename"], text),
-                            file_name=export.docx_filename(d["filename"]),
-                            mime=export.DOCX_MIME,
-                            key=f"dl_adm_{d['id']}",
-                        )
-                        st.markdown(
-                            f"<div style='font-size:0.85rem; color:#CCC; line-height:1.6; "
-                            f"max-height:480px; overflow-y:auto; white-space:pre-wrap; "
-                            f"padding:0.5rem 0.25rem;'>{text}</div>",
-                            unsafe_allow_html=True,
-                        )
-                    else:
-                        st.caption("—")
-                else:
-                    st.caption(label)
+            st.markdown(f"""
+<div style="display:flex; align-items:center; padding:0.6rem 0.75rem; background:#0F0F0F; border:1px solid #1E1E1E; border-radius:2px; margin-bottom:4px;">
+  <span class="dot {dot}"></span>
+  <span style="font-size:0.82rem; color:#CCCCCC; flex:1;">{d['filename']}</span>
+  <span style="font-size:0.7rem; color:#444; letter-spacing:0.06em;">{label}</span>
+</div>
+""", unsafe_allow_html=True)
     else:
         st.info(t("admin.docs.empty"))
 
