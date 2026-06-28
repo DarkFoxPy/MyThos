@@ -327,22 +327,39 @@ Respondé ÚNICAMENTE con este JSON (sin texto adicional):
 
 
 def save_approved_modules(modules: list[dict], company_id: str, db) -> list[str]:
-    """Guarda los módulos aprobados por el admin y desactiva los anteriores."""
-    db.table("modules").update({"status": "inactive"}).eq("company_id", company_id).execute()
+    """Guarda los módulos aprobados por el admin de forma ADITIVA:
+    - Conserva la ruta existente (no la borra ni la desactiva).
+    - Si un módulo nuevo tiene un título idéntico a uno ya activo, lo omite
+      (evita duplicar lo que ya está en la ruta).
+    - Los módulos genuinamente nuevos se agregan al final, continuando la
+      numeración (si había 6, el nuevo entra como 7, 8, ...).
+    Devuelve los ids de los módulos efectivamente agregados.
+    """
+    def _norm(s: str) -> str:
+        return (s or "").strip().lower()
+
+    existing = get_active_modules(company_id, db)
+    existing_titles = {_norm(m["title"]) for m in existing}
+    next_order = max([m.get("order_index", 0) for m in existing], default=0) + 1
 
     ids = []
     for mod in modules:
+        titulo = mod["titulo"]
+        if _norm(titulo) in existing_titles:
+            continue  # módulo idéntico ya presente → se omite
         result = db.table("modules").insert({
             "company_id":       company_id,
-            "title":            mod["titulo"],
+            "title":            titulo,
             "topic":            mod.get("tema_principal", ""),
-            "order_index":      mod.get("orden", 0),
+            "order_index":      next_order,
             "duration_minutes": mod.get("duracion_estimada_minutos", 20),
             "source_documents": mod.get("documentos_fuente", []),
             "status":           "active",
         }).execute()
         if result.data:
             ids.append(result.data[0]["id"])
+            existing_titles.add(_norm(titulo))
+            next_order += 1
     return ids
 
 

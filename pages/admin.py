@@ -184,15 +184,18 @@ def _company(company_id: str):
 </div>
 """, unsafe_allow_html=True)
         with cols[2]:
-            new_role = st.selectbox(
+            new_role = st.segmented_control(
                 "rol",
                 role_options,
-                index=role_options.index(u["role"]) if u["role"] in role_options else 0,
+                default=u["role"] if u["role"] in role_options else role_options[0],
                 format_func=lambda r: t(f"role.{r}"),
                 key=f"role_select_{u['id']}",
                 label_visibility="collapsed",
                 disabled=is_self,
             )
+            # segmented_control devuelve None si se deselecciona: mantener el rol actual
+            if not new_role:
+                new_role = u["role"]
         with cols[3]:
             if not is_self and new_role != u["role"]:
                 if st.button(t("admin.company.save_role"), key=f"save_{u['id']}", type="primary", use_container_width=True):

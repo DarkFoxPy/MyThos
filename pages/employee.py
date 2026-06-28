@@ -246,7 +246,15 @@ def _chat_tab(employee_id: str, company_id: str, db):
     mod_options = {t("emp.chat.general"): None}
     mod_options.update({m["title"]: m["id"] for m in modules})
 
-    selected  = st.selectbox(f"{t('emp.chat.related')}:", list(mod_options.keys()))
+    def _short(label: str) -> str:
+        return label if len(label) <= 34 else label[:32] + "…"
+
+    selected  = st.radio(
+        f"{t('emp.chat.related')}:",
+        list(mod_options.keys()),
+        format_func=_short,
+        horizontal=True,
+    )
     module_id = mod_options[selected]
 
     history = atlas.get_history(employee_id, module_id, db)

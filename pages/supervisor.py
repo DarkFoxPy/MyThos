@@ -172,11 +172,11 @@ def _alerts(company_id: str):
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        _kpi_card("Brechas detectadas", n_breach, COLOR_BAD, "Comprensión insuficiente")
+        _kpi_card(t("sup.kpi.breaches"), n_breach, COLOR_BAD, t("sup.kpi.breaches_sub"))
     with c2:
-        _kpi_card("No verificadas", n_notver, COLOR_WARN, "Señales de superficialidad")
+        _kpi_card(t("sup.kpi.notver"), n_notver, COLOR_WARN, t("sup.kpi.notver_sub"))
     with c3:
-        _kpi_card("Estancados >3 días", n_stalled, COLOR_NEU, "Sin avance reciente")
+        _kpi_card(t("sup.kpi.stalled"), n_stalled, COLOR_NEU, t("sup.kpi.stalled_sub"))
 
     st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
 
@@ -204,11 +204,11 @@ def _alerts(company_id: str):
     <span class="dot dot-yellow"></span>
     <span style="font-size:0.95rem; font-weight:600; color:#FFFFFF;">{a['employee_name']}</span>
     <span style="font-size:0.78rem; color:#888;">  ·  {a['module_title']}</span>
-    <span style="margin-left:auto; font-size:0.7rem; color:{COLOR_WARN}; letter-spacing:0.1em; text-transform:uppercase; font-weight:600;">ESTANCADO</span>
+    <span style="margin-left:auto; font-size:0.7rem; color:{COLOR_WARN}; letter-spacing:0.1em; text-transform:uppercase; font-weight:600;">{t('sup.badge.stalled')}</span>
   </div>
   <div style="font-size:0.85rem; color:#CCC; margin-bottom:0.5rem;">{a['message']}</div>
   <div style="font-size:0.8rem; padding:0.6rem 0.8rem; background:#0A0F1A; border-left:3px solid {COLOR_NEU}; border-radius:2px;">
-    <strong style="color:#88BBFF;">Acción sugerida:</strong> <span style="color:#CCC;">{a['action']}</span>
+    <strong style="color:#88BBFF;">{t('sup.alerts.action')}:</strong> <span style="color:#CCC;">{a['action']}</span>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -221,7 +221,7 @@ def _alert_card(breach_row: dict, employee_name: str, module_title: str):
 
     accent = COLOR_BAD if is_breach else COLOR_WARN
     bg = "#1A0A0A" if is_breach else "#1A1100"
-    label = "BRECHA DETECTADA" if is_breach else "NO VERIFICADA"
+    label = t("sup.badge.breach") if is_breach else t("sup.badge.notver")
     dot = "dot-red" if is_breach else "dot-yellow"
 
     detail = parse_breach_detail(breach_row.get("suggested_action", ""))
@@ -236,16 +236,16 @@ def _alert_card(breach_row: dict, employee_name: str, module_title: str):
     brechas_html = ""
     if brechas:
         items = "".join(f'<div style="display:flex;gap:0.5rem;padding:0.2rem 0;font-size:0.83rem;color:#E0CCCC;"><span style="color:{COLOR_BAD};font-weight:700;">×</span><span>{br}</span></div>' for br in brechas)
-        brechas_html = f'<div style="margin-top:0.8rem;padding:0.7rem 0.9rem;background:#1A0A0A;border:1px solid #3D1010;border-radius:4px;"><div style="font-size:0.7rem;color:{COLOR_BAD};letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:0.4rem;">⨯ Conceptos NO comprendidos</div>{items}</div>'
+        brechas_html = f'<div style="margin-top:0.8rem;padding:0.7rem 0.9rem;background:#1A0A0A;border:1px solid #3D1010;border-radius:4px;"><div style="font-size:0.7rem;color:{COLOR_BAD};letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:0.4rem;">⨯ {t("sup.card.not_understood")}</div>{items}</div>'
 
     fortalezas_html = ""
     if fortalezas:
         items = "".join(f'<div style="display:flex;gap:0.5rem;padding:0.2rem 0;font-size:0.83rem;color:#CCE0CC;"><span style="color:{COLOR_OK};font-weight:700;">✓</span><span>{fo}</span></div>' for fo in fortalezas)
-        fortalezas_html = f'<div style="margin-top:0.5rem;padding:0.7rem 0.9rem;background:#0A1A0A;border:1px solid #1E3E1E;border-radius:4px;"><div style="font-size:0.7rem;color:{COLOR_OK};letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:0.4rem;">✓ Conceptos sí comprendidos</div>{items}</div>'
+        fortalezas_html = f'<div style="margin-top:0.5rem;padding:0.7rem 0.9rem;background:#0A1A0A;border:1px solid #1E3E1E;border-radius:4px;"><div style="font-size:0.7rem;color:{COLOR_OK};letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:0.4rem;">✓ {t("sup.card.understood")}</div>{items}</div>'
 
     accion_html = ""
     if accion:
-        accion_html = f'<div style="margin-top:0.5rem;padding:0.7rem 0.9rem;background:#0A0F1A;border-left:3px solid {COLOR_NEU};border-radius:4px;"><div style="font-size:0.7rem;color:#88BBFF;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:0.25rem;">→ Acción sugerida al supervisor</div><div style="font-size:0.85rem;color:#DCE6F2;">{accion}</div></div>'
+        accion_html = f'<div style="margin-top:0.5rem;padding:0.7rem 0.9rem;background:#0A0F1A;border-left:3px solid {COLOR_NEU};border-radius:4px;"><div style="font-size:0.7rem;color:#88BBFF;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:0.25rem;">→ {t("sup.card.action_sup")}</div><div style="font-size:0.85rem;color:#DCE6F2;">{accion}</div></div>'
 
     st.markdown(f"""
 <div style="background:{bg}; border:1px solid {accent}44; border-left:4px solid {accent}; padding:1rem 1.2rem; border-radius:4px; margin-bottom:0.25rem;">
@@ -310,7 +310,7 @@ def _metric_time(m: dict, key: str = ""):
         margin=dict(l=10, r=10, t=30, b=5),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        title=dict(text=f"Tiempo dedicado<br><span style='font-size:9px;color:#888'>mínimo: {min_time} min · estimado: {full} min</span>",
+        title=dict(text=f"{t('sup.metric.time')}<br><span style='font-size:9px;color:#888'>{t('sup.metric.min')}: {min_time} min · {t('sup.metric.est')}: {full} min</span>",
                    font=dict(size=10, color=COLOR_MUTED), x=0.5, y=0.95),
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False}, key=f"metric_time_{key}")
@@ -348,7 +348,7 @@ def _metric_quiz(m: dict, key: str = ""):
         margin=dict(l=10, r=10, t=30, b=5),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        title=dict(text=f"Puntaje del cuestionario<br><span style='font-size:9px;color:#888'>{correct}✓ {partial}~ {incorrect}✗ de {total}</span>",
+        title=dict(text=f"{t('sup.metric.quiz')}<br><span style='font-size:9px;color:#888'>{correct}✓ {partial}~ {incorrect}✗ {t('sup.metric.of')} {total}</span>",
                    font=dict(size=10, color=COLOR_MUTED), x=0.5, y=0.95),
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False}, key=f"metric_quiz_{key}")
@@ -370,7 +370,7 @@ def _metric_consultas(m: dict, key: str = ""):
         margin=dict(l=10, r=10, t=30, b=5),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        title=dict(text="Consultas al asistente<br><span style='font-size:9px;color:#888'>ideal: 3 a 6</span>",
+        title=dict(text=f"{t('sup.metric.consultas')}<br><span style='font-size:9px;color:#888'>{t('sup.metric.ideal')}</span>",
                    font=dict(size=10, color=COLOR_MUTED), x=0.5, y=0.95),
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False}, key=f"metric_consultas_{key}")
@@ -412,10 +412,10 @@ def _overview(company_id: str):
     n_done = sum(1 for e in team if e["overall_pct"] == 100)
 
     c1, c2, c3, c4 = st.columns(4)
-    with c1: _kpi_card("Empleados activos", total_emp, COLOR_NEU)
-    with c2: _kpi_card("Progreso promedio", f"{int(avg_pct)}%", COLOR_WARN)
-    with c3: _kpi_card("Con brecha detectada", n_breach, COLOR_BAD)
-    with c4: _kpi_card("Ruta completada", n_done, COLOR_OK)
+    with c1: _kpi_card(t("sup.kpi.active"), total_emp, COLOR_NEU)
+    with c2: _kpi_card(t("sup.kpi.avg"), f"{int(avg_pct)}%", COLOR_WARN)
+    with c3: _kpi_card(t("sup.kpi.with_breach"), n_breach, COLOR_BAD)
+    with c4: _kpi_card(t("sup.kpi.done"), n_done, COLOR_OK)
 
     st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
 
@@ -434,14 +434,14 @@ def _overview(company_id: str):
     st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
 
     # ── Cards expandibles por empleado ───────────────────────────────────────
-    st.markdown(f"<div style='font-size:0.85rem; color:#888; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.5rem;'>Detalle por empleado</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:0.85rem; color:#888; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.5rem;'>{t('sup.overview.detail')}</div>", unsafe_allow_html=True)
     for emp in team:
         pct = emp["overall_pct"]
         breach_count = sum(1 for m in emp["modules"] if m["breach_status"] == "breach_detected")
         notver_count = sum(1 for m in emp["modules"] if m["breach_status"] == "not_verified")
 
         header_color = COLOR_BAD if emp["has_breach"] else (COLOR_OK if pct == 100 else COLOR_WARN)
-        header_label = f"⚠ {breach_count} brecha(s)" if emp["has_breach"] else ("✓ Completado" if pct == 100 else f"{pct}% completado")
+        header_label = f"⚠ {breach_count} {t('sup.overview.breaches_n')}" if emp["has_breach"] else (f"✓ {t('status.completed')}" if pct == 100 else f"{pct}% {t('sup.team.complete')}")
 
         with st.expander(f"{emp['full_name']}  ·  {pct}% — {header_label}", expanded=emp["has_breach"]):
             # Barras por módulo
@@ -460,7 +460,7 @@ def _overview(company_id: str):
 
             fig = make_subplots(
                 rows=1, cols=2,
-                subplot_titles=("Tiempo dedicado (min)", "Puntaje del cuestionario (%)"),
+                subplot_titles=(t("sup.chart.time_min"), t("sup.chart.quiz_pct")),
                 horizontal_spacing=0.28,
             )
             fig.add_trace(go.Bar(
@@ -506,7 +506,7 @@ def _chart_progress_by_employee(team: list):
     fig.update_layout(
         height=max(250, 50 * len(team) + 60),
         margin=dict(l=10, r=30, t=40, b=20),
-        title=dict(text="Progreso por empleado", font=dict(size=13, color=COLOR_TEXT), x=0, xanchor="left"),
+        title=dict(text=t("sup.chart.progress"), font=dict(size=13, color=COLOR_TEXT), x=0, xanchor="left"),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter, sans-serif", color=COLOR_TEXT, size=11),
@@ -527,7 +527,7 @@ def _chart_diagnosis_distribution(team: list):
             else:
                 counts["pending"] += 1
 
-    labels = ["Verificado", "No verificado", "Brecha detectada", "Pendiente"]
+    labels = [t("status.verified"), t("status.not_verified"), t("status.breach"), t("sup.status.pending")]
     values = [counts["verified"], counts["not_verified"], counts["breach_detected"], counts["pending"]]
     colors = [COLOR_OK, COLOR_WARN, COLOR_BAD, "#444"]
 
@@ -542,14 +542,14 @@ def _chart_diagnosis_distribution(team: list):
     fig.update_layout(
         height=320,
         margin=dict(l=20, r=20, t=40, b=20),
-        title=dict(text="Distribución de diagnósticos", font=dict(size=13, color=COLOR_TEXT), x=0, xanchor="left"),
+        title=dict(text=t("sup.chart.diagnosis"), font=dict(size=13, color=COLOR_TEXT), x=0, xanchor="left"),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter, sans-serif", color=COLOR_TEXT, size=11),
         showlegend=True,
         legend=dict(orientation="v", x=1.05, y=0.5, font=dict(size=10, color=COLOR_MUTED)),
         annotations=[dict(
-            text=f"<b>{total_eval}</b><br><span style='font-size:9px;color:#888'>evaluados</span>",
+            text=f"<b>{total_eval}</b><br><span style='font-size:9px;color:#888'>{t('sup.chart.evaluated')}</span>",
             x=0.5, y=0.5, showarrow=False, font=dict(size=18, color=COLOR_TEXT),
         )],
     )
@@ -577,10 +577,10 @@ def _chart_heatmap(team: list):
             ps = mod["progress_status"]
             if bs in status_to_val:
                 v = status_to_val[bs]
-                lbl = {"verified": "Verificado", "not_verified": "No verificado", "breach_detected": "Brecha"}[bs]
+                lbl = {"verified": t("status.verified"), "not_verified": t("status.not_verified"), "breach_detected": t("status.breach")}[bs]
             else:
                 v = progress_to_val.get(ps, 0)
-                lbl = {"in_progress": "En progreso", "not_started": "No iniciado", "completed": "Completado"}.get(ps, "—")
+                lbl = {"in_progress": t("status.in_progress"), "not_started": t("status.not_started"), "completed": t("status.completed")}.get(ps, "—")
             row_z.append(v)
             row_t.append(f"{lbl}<br>{mod['time_spent_minutes']} min · Quiz: {mod['quiz_score_pct']}%")
         z.append(row_z); text.append(row_t)
@@ -604,7 +604,7 @@ def _chart_heatmap(team: list):
     fig.update_layout(
         height=max(200, 50 * len(team) + 100),
         margin=dict(l=10, r=10, t=40, b=80),
-        title=dict(text="Mapa de comprensión: empleados × módulos", font=dict(size=13, color=COLOR_TEXT), x=0, xanchor="left"),
+        title=dict(text=t("sup.chart.heatmap"), font=dict(size=13, color=COLOR_TEXT), x=0, xanchor="left"),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter, sans-serif", color=COLOR_TEXT, size=10),
@@ -616,11 +616,11 @@ def _chart_heatmap(team: list):
     # Leyenda manual
     st.markdown(f"""
 <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:-0.5rem; font-size:0.72rem; color:#888;">
-  <span><span style="display:inline-block;width:10px;height:10px;background:{COLOR_OK};border-radius:2px;margin-right:5px;"></span>Verificado</span>
-  <span><span style="display:inline-block;width:10px;height:10px;background:{COLOR_WARN};border-radius:2px;margin-right:5px;"></span>No verificado</span>
-  <span><span style="display:inline-block;width:10px;height:10px;background:{COLOR_BAD};border-radius:2px;margin-right:5px;"></span>Brecha detectada</span>
-  <span><span style="display:inline-block;width:10px;height:10px;background:#444;border-radius:2px;margin-right:5px;"></span>En progreso</span>
-  <span><span style="display:inline-block;width:10px;height:10px;background:#222;border-radius:2px;margin-right:5px;"></span>No iniciado</span>
+  <span><span style="display:inline-block;width:10px;height:10px;background:{COLOR_OK};border-radius:2px;margin-right:5px;"></span>{t('status.verified')}</span>
+  <span><span style="display:inline-block;width:10px;height:10px;background:{COLOR_WARN};border-radius:2px;margin-right:5px;"></span>{t('status.not_verified')}</span>
+  <span><span style="display:inline-block;width:10px;height:10px;background:{COLOR_BAD};border-radius:2px;margin-right:5px;"></span>{t('status.breach')}</span>
+  <span><span style="display:inline-block;width:10px;height:10px;background:#444;border-radius:2px;margin-right:5px;"></span>{t('status.in_progress')}</span>
+  <span><span style="display:inline-block;width:10px;height:10px;background:#222;border-radius:2px;margin-right:5px;"></span>{t('status.not_started')}</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -658,7 +658,7 @@ def _detail(company_id: str):
         # Determinar color y label del módulo en el expander
         if breach:
             bs = breach[0]["status"]
-            module_label = {"verified": "✓ Verificado", "not_verified": "~ No verificado", "breach_detected": "✗ Brecha"}.get(bs, "")
+            module_label = {"verified": f"✓ {t('status.verified')}", "not_verified": f"~ {t('status.not_verified')}", "breach_detected": f"✗ {t('status.breach')}"}.get(bs, "")
         else:
             module_label = ""
 
@@ -726,7 +726,7 @@ def _detail(company_id: str):
                     if brechas:
                         st.markdown(f"""
 <div style="margin-top:0.6rem; padding:0.8rem 1rem; background:#1A0A0A; border:1px solid #3D1010; border-radius:4px;">
-  <div style="font-size:0.72rem; color:{COLOR_BAD}; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; margin-bottom:0.5rem;">⨯ Conceptos NO comprendidos</div>
+  <div style="font-size:0.72rem; color:{COLOR_BAD}; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; margin-bottom:0.5rem;">⨯ {t("sup.card.not_understood")}</div>
 """, unsafe_allow_html=True)
                         for br in brechas:
                             st.markdown(f"""<div style="display:flex; gap:0.5rem; padding:0.3rem 0; font-size:0.83rem; color:#E0CCCC;"><span style="color:{COLOR_BAD};">×</span><span>{br}</span></div>""", unsafe_allow_html=True)
@@ -737,7 +737,7 @@ def _detail(company_id: str):
                     if fortalezas:
                         st.markdown(f"""
 <div style="margin-top:0.5rem; padding:0.8rem 1rem; background:#0A1A0A; border:1px solid #1E3E1E; border-radius:4px;">
-  <div style="font-size:0.72rem; color:{COLOR_OK}; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; margin-bottom:0.5rem;">✓ Conceptos sí comprendidos</div>
+  <div style="font-size:0.72rem; color:{COLOR_OK}; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; margin-bottom:0.5rem;">✓ {t("sup.card.understood")}</div>
 """, unsafe_allow_html=True)
                         for fo in fortalezas:
                             st.markdown(f"""<div style="display:flex; gap:0.5rem; padding:0.3rem 0; font-size:0.83rem; color:#CCE0CC;"><span style="color:{COLOR_OK};">✓</span><span>{fo}</span></div>""", unsafe_allow_html=True)
@@ -748,7 +748,7 @@ def _detail(company_id: str):
                     if accion and not (accion.startswith("{") and "accion_principal" in accion):
                         st.markdown(f"""
 <div style="margin-top:0.6rem; padding:0.8rem 1rem; background:#0A0F1A; border-left:3px solid {COLOR_NEU}; border-radius:4px;">
-  <div style="font-size:0.72rem; color:#88BBFF; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; margin-bottom:0.3rem;">→ Acción sugerida</div>
+  <div style="font-size:0.72rem; color:#88BBFF; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; margin-bottom:0.3rem;">→ {t('sup.detail.suggested')}</div>
   <div style="font-size:0.85rem; color:#DCE6F2;">{accion}</div>
 </div>
 """, unsafe_allow_html=True)
