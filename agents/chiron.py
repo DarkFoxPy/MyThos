@@ -1,9 +1,9 @@
 """
-Mnemosyne — Knowledge Capture Agent
+Chiron — Knowledge Capture Agent
 Entrevista guiada + síntesis documental + indexación en el RAG.
 
 Resuelve la causa raíz del Entregable 1: "documentar genera un costo de tiempo
-que la empresa no está dispuesta a asumir". Mnemosyne extrae el conocimiento
+que la empresa no está dispuesta a asumir". Chiron extrae el conocimiento
 TÁCITO del supervisor (cómo se hace el trabajo del puesto, que no está en ningún
 manual) mediante preguntas guiadas, lo estructura en un documento y lo indexa.
 
@@ -24,7 +24,7 @@ from utils import processor
 
 # ── Función A: Generación de preguntas guiadas ────────────────────────────────
 
-QUESTIONS_PROMPT = """Sos Mnemosyne, el agente de captura de conocimiento del sistema Mythos.
+QUESTIONS_PROMPT = """Sos Chiron, el agente de captura de conocimiento del sistema Mythos.
 Un supervisor quiere enseñarle a Mythos el conocimiento operativo de un puesto o tema,
 de modo que los empleados nuevos puedan aprenderlo sin depender de su tiempo.
 
@@ -61,13 +61,13 @@ def generate_questions(topic: str, lang: str = "es") -> list[str]:
 
     preguntas = [q for q in data.get("preguntas", []) if isinstance(q, str) and q.strip()]
     if not preguntas:
-        raise RuntimeError("Mnemosyne no pudo generar preguntas. Probá reformular el tema.")
+        raise RuntimeError("Chiron no pudo generar preguntas. Probá reformular el tema.")
     return preguntas
 
 
 # ── Función B: Síntesis del documento ─────────────────────────────────────────
 
-SYNTH_PROMPT = """Sos Mnemosyne, el agente de captura de conocimiento del sistema Mythos.
+SYNTH_PROMPT = """Sos Chiron, el agente de captura de conocimiento del sistema Mythos.
 Convertí la siguiente entrevista a un supervisor en un DOCUMENTO DE REFERENCIA claro y
 estructurado, dirigido a un empleado nuevo, sobre el tema: "{topic}".
 

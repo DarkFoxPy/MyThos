@@ -4,7 +4,7 @@ import streamlit as st
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from database.client import get_client
-from agents import artemis, atlas, athena, mnemosyne
+from agents import artemis, atlas, athena, chiron
 from agents.artemis import parse_breach_detail
 from utils.theme import page_header
 from utils.i18n import t, get_lang
@@ -64,7 +64,7 @@ def show(profile: dict, company_id: str):
 
 
 def _capture(company_id: str):
-    """Mnemosyne — el supervisor le enseña a Mythos su conocimiento del puesto
+    """Chiron — el supervisor le enseña a Mythos su conocimiento del puesto
     mediante una entrevista guiada que se documenta e indexa en el RAG."""
     st.markdown(f"### {t('sup.capture.title')}")
     st.markdown(f"<p style='font-size:0.82rem; color:#888; line-height:1.6;'>{t('sup.capture.intro')}</p>", unsafe_allow_html=True)
@@ -101,7 +101,7 @@ def _capture(company_id: str):
         else:
             with st.spinner(t("sup.capture.generating")):
                 try:
-                    qs = mnemosyne.generate_questions(topic.strip(), lang=get_lang())
+                    qs = chiron.generate_questions(topic.strip(), lang=get_lang())
                     st.session_state.capture_questions = qs
                     st.session_state.capture_topic = topic.strip()
                     st.rerun()
@@ -127,7 +127,7 @@ def _capture(company_id: str):
             else:
                 with st.spinner(t("sup.capture.saving")):
                     try:
-                        res = mnemosyne.capture(st.session_state.capture_topic, answers, company_id, db, lang=get_lang())
+                        res = chiron.capture(st.session_state.capture_topic, answers, company_id, db, lang=get_lang())
                         st.session_state.capture_result = res
                         st.rerun()
                     except Exception as e:
