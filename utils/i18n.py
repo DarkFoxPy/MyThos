@@ -364,19 +364,20 @@ def lang_name(lang: str) -> str:
 
 
 def selector():
-    """Dropdown de idioma arriba a la derecha (ES / EN)."""
+    """Toggle de idioma arriba a la derecha (ES / EN). No editable."""
     init_lang()
     cur = get_lang()
     cols = st.columns([10, 1.6])
     with cols[1]:
-        choice = st.selectbox(
+        choice = st.segmented_control(
             "lang",
             LANGS,
-            index=LANGS.index(cur) if cur in LANGS else 0,
-            format_func=lambda c: f"  {c.upper()}   {LANG_LABELS[c]}",
+            format_func=lambda c: c.upper(),
+            default=cur if cur in LANGS else DEFAULT_LANG,
             label_visibility="collapsed",
             key="lang_selector_box",
         )
-        if choice != cur:
+        # segmented_control devuelve None si se deselecciona: mantener el actual
+        if choice and choice != cur:
             set_lang(choice)
             st.rerun()
