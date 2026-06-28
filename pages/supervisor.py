@@ -637,7 +637,11 @@ def _detail(company_id: str):
         return
 
     options = {e["full_name"]: e["id"] for e in employees}
-    selected = st.selectbox(f"{t('sup.detail.employee')}:", list(options.keys()))
+    selected = st.radio(
+        f"{t('sup.detail.employee')}:",
+        list(options.keys()),
+        horizontal=True,
+    )
     emp_id = options[selected]
     modules = atlas.get_active_modules(company_id, db)
 

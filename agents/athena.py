@@ -99,27 +99,38 @@ def _generate_progress_response(employee_id: str, company_id: str, db, lang: str
 # ── Gestión de alertas ────────────────────────────────────────────────────────
 
 def get_pending_alerts(company_id: str, db, lang: str = "es") -> list[dict]:
-    """Empleados con brechas detectadas o estancados >3 días."""
+    """Empleados con brechas detectadas o estancados >3 días.
+    SIEMPRE acotado a la empresa: se filtra por los empleados de company_id
+    para no filtrar datos de otras empresas (aislamiento multi-tenant)."""
     import datetime
     cutoff = (datetime.datetime.utcnow() - datetime.timedelta(days=3)).isoformat()
+
+    # Empleados de ESTA empresa — define el universo permitido
+    emp_rows = (
+        db.table("profiles").select("id, full_name")
+        .eq("company_id", company_id).eq("role", "employee").execute().data or []
+    )
+    company_emp_ids = [e["id"] for e in emp_rows]
+    name_map = {e["id"]: e["full_name"] for e in emp_rows}
+    if not company_emp_ids:
+        return []
 
     stalled = (
         db.table("employee_progress")
         .select("employee_id, module_id, status, started_at")
-        .eq("status", "in_progress").lt("started_at", cutoff).execute().data or []
+        .eq("status", "in_progress").lt("started_at", cutoff)
+        .in_("employee_id", company_emp_ids).execute().data or []
     )
     breaches = (
         db.table("breach_analyses")
         .select("employee_id, module_id, reason, suggested_action")
-        .eq("status", "breach_detected").execute().data or []
+        .eq("status", "breach_detected")
+        .in_("employee_id", company_emp_ids).execute().data or []
     )
 
-    emp_ids = list({r["employee_id"] for r in stalled + breaches})
-    if not emp_ids:
+    if not stalled and not breaches:
         return []
 
-    profiles = db.table("profiles").select("id, full_name").in_("id", emp_ids).execute().data or []
-    name_map = {p["id"]: p["full_name"] for p in profiles}
     mod_ids  = list({r["module_id"] for r in stalled + breaches})
     mods     = db.table("modules").select("id, title").in_("id", mod_ids).execute().data or []
     mod_map  = {m["id"]: m["title"] for m in mods}

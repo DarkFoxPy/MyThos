@@ -95,7 +95,7 @@ def _route(company_id: str):
         for i, mod in enumerate(st.session_state.proposed_modules):
             with st.expander(f"{t('admin.route.module_n')} {mod.get('orden', i+1)}: {mod.get('titulo','')}", expanded=True):
                 title    = st.text_input(t("admin.route.title_label"), value=mod.get("titulo",""), key=f"t{i}")
-                topic    = st.text_input(t("admin.route.topic"), value=mod.get("tema_principal",""), key=f"tp{i}")
+                topic    = st.text_area(t("admin.route.topic"), value=mod.get("tema_principal",""), key=f"tp{i}", height=90)
                 duration = st.number_input(t("admin.route.duration"), value=mod.get("duracion_estimada_minutos",20), min_value=5, max_value=120, key=f"d{i}")
                 edited.append({
                     "orden": mod.get("orden", i+1),
@@ -122,12 +122,20 @@ def _route(company_id: str):
     db = get_client(st.session_state.get("access_token"))
     active = atlas.get_active_modules(company_id, db)
     if active:
+        import html as _html
         for m in active:
+            titulo = _html.escape(m.get("title", ""))
+            tema   = _html.escape(m.get("topic", "") or "")
+            dur    = m.get("duration_minutes", 20)
+            tema_html = f'<div style="font-size:0.8rem; color:#999; line-height:1.5; margin-top:0.35rem; word-break:break-word;">{tema}</div>' if tema else ""
             st.markdown(f"""
-<div style="display:flex; align-items:center; padding:0.6rem 0.75rem; background:#0F0F0F; border:1px solid #1E1E1E; border-radius:2px; margin-bottom:4px;">
-  <span style="font-size:0.75rem; color:#FF8000; font-weight:700; width:1.5rem;">{m['order_index']}</span>
-  <span style="font-size:0.82rem; color:#FFFFFF; flex:1; font-weight:500;">{m['title']}</span>
-  <span style="font-size:0.72rem; color:#555;">{m.get('topic','')} &nbsp;&middot;&nbsp; {m.get('duration_minutes',20)} min</span>
+<div style="background:#0F0F0F; border:1px solid #1E1E1E; border-left:3px solid #FF8000; border-radius:4px; padding:0.8rem 1rem; margin-bottom:0.5rem;">
+  <div style="display:flex; align-items:baseline; gap:0.6rem;">
+    <span style="font-size:0.72rem; color:#FF8000; font-weight:700; background:#FF800018; padding:2px 8px; border-radius:3px; flex-shrink:0;">{m['order_index']}</span>
+    <span style="font-size:0.92rem; color:#FFFFFF; font-weight:600; line-height:1.35; word-break:break-word;">{titulo}</span>
+    <span style="margin-left:auto; font-size:0.7rem; color:#666; white-space:nowrap; flex-shrink:0;">{dur} min</span>
+  </div>
+  {tema_html}
 </div>
 """, unsafe_allow_html=True)
     else:
